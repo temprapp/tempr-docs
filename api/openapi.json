@@ -7,12 +7,7 @@
   },
   "servers": [
     {
-      "description": "Staging",
       "url": "https://staging.x1.temprapp.com/api/v3"
-    },
-    {
-      "description": "Production server",
-      "url": "https://quote.shadesoftx.com/api/v3"
     }
   ],
   "paths": {
