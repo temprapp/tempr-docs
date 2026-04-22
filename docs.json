@@ -1,8 +1,8 @@
 {
   "$schema": "https://jamdesk.com/docs.json",
-  "name": "Documentation",
+  "name": "Tempr API Docs",
   "description": "Your documentation site powered by Jamdesk",
-  "theme": "jam",
+  "theme": "pulsar",
   "colors": {
     "primary": "#6366F1",
     "light": "#818CF8",
@@ -15,6 +15,9 @@
       "href": "/introduction"
     }
   },
+  "api": {
+    "openapi": ["api/openapi.json"]
+  },
   "navigation": {
     "tabs": [
       {
@@ -25,15 +28,20 @@
             "group": "Get Started",
             "pages": [
               "introduction",
-              "quickstart"
+              "api/work-orders/guides/work-order-flow"
             ]
           },
           {
-            "group": "Writing Content",
+            "group": "API Docs",
             "pages": [
-              "writing/pages",
-              "writing/components",
-              "writing/code-blocks"
+              "api/work-orders/list",
+              "api/work-orders/get",
+              "api/work-orders/post-photo",
+              "api/work-orders/en-route",
+              "api/work-orders/comments",
+              "api/work-orders/payments",
+              "api/work-orders/complete",
+              "api/work-orders/incomplete"
             ]
           }
         ]

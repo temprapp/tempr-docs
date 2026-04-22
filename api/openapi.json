@@ -1,0 +1,993 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Tempr Mobile Work Orders API",
+    "version": "1.0.0",
+    "description": "API endpoints for mobile work-order workflows.\nThese endpoints are protected with the `oauth-jwt` guard (`auth:oauth-jwt`).\n"
+  },
+  "servers": [
+    {
+      "url": "https://quote.shadesoftx.com/api/v3"
+    }
+  ],
+  "paths": {
+    "/work-orders": {
+      "get": {
+        "summary": "List work orders",
+        "description": "Returns work orders with nested project and customer details.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "per_page",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "description": "Number of items per page."
+          },
+          {
+            "in": "query",
+            "name": "project_id",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Filter by project id."
+          },
+          {
+            "in": "query",
+            "name": "customer_id",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Filter by customer id."
+          },
+          {
+            "in": "query",
+            "name": "scheduled_from",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "Include work orders scheduled on or after this datetime."
+          },
+          {
+            "in": "query",
+            "name": "scheduled_to",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "Include work orders scheduled on or before this datetime."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated work orders.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedWorkOrders"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          }
+        }
+      }
+    },
+    "/work-orders/{workOrder}": {
+      "get": {
+        "summary": "Get work order",
+        "description": "Returns one work order with nested project and customer details.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workOrder",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Work order details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/WorkOrder"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "Work order not found."
+          }
+        }
+      }
+    },
+    "/work-orders/{workOrder}/photos": {
+      "post": {
+        "summary": "Upload work order photo",
+        "description": "Uploads a mobile photo and attaches it to the work order's project/customer.\nThe file is stored via Spatie Media Library in the project's `photos` collection with custom properties:\n`User ID`, `Photo Type`, and `Upload Source` (`mobile`).\n",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workOrder",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "photo": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "photo_type": {
+                    "type": "string",
+                    "enum": [
+                      "Before",
+                      "After",
+                      "General"
+                    ],
+                    "default": "General",
+                    "description": "Categorizes the photo for downstream workflows."
+                  },
+                  "provided_by": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "Optional source label stored in media custom properties."
+                  }
+                },
+                "required": [
+                  "photo"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Photo uploaded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhotoUploadResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          }
+        }
+      }
+    },
+    "/work-orders/{workOrder}/en-route": {
+      "post": {
+        "summary": "Trigger staff en-route event",
+        "description": "Dispatches the `StaffEnRoute` event for the work order.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workOrder",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "note": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "meta": {
+                    "type": "object",
+                    "additionalProperties": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Event accepted and dispatched.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnRouteResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          }
+        }
+      }
+    },
+    "/work-orders/{workOrder}/comments": {
+      "post": {
+        "summary": "Post project comment from work order context",
+        "description": "Creates a project comment tied to the authenticated mobile user.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workOrder",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "comment": {
+                    "type": "string",
+                    "maxLength": 5000
+                  }
+                },
+                "required": [
+                  "comment"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Project comment created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectCommentResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          }
+        }
+      }
+    },
+    "/work-orders/{workOrder}/complete": {
+      "post": {
+        "summary": "Mark work order complete",
+        "description": "Completes the work order and returns the current project balance due plus saved card payment methods.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workOrder",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "work_order_item_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "description": "Optional subset of work-order item ids to commit during completion. Defaults to all work-order items."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Work order completed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderCompleteResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          }
+        }
+      }
+    },
+    "/work-orders/{workOrder}/payments": {
+      "post": {
+        "summary": "Accept mobile payment",
+        "description": "Accepts payment against the work order's project balance due.\nSupports charging a saved Stripe card on file or creating a Stripe Tap to Pay payment intent.\n",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workOrder",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "string",
+                    "example": "125.00"
+                  },
+                  "payment_type": {
+                    "type": "string",
+                    "enum": [
+                      "card_on_file",
+                      "tap_to_pay"
+                    ]
+                  },
+                  "payment_method_id": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "Required when `payment_type` is `card_on_file`."
+                  },
+                  "description": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "meta": {
+                    "type": "object",
+                    "additionalProperties": true
+                  }
+                },
+                "required": [
+                  "amount",
+                  "payment_type"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Payment processed or Tap to Pay intent created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderPaymentResponse"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Payment accepted and submitted to Stripe for processing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderPaymentResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          }
+        }
+      }
+    },
+    "/work-orders/{workOrder}/incomplete": {
+      "post": {
+        "summary": "Mark work order incomplete",
+        "description": "Marks the work order incomplete, records the reason, and creates a help desk ticket for follow-up.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workOrder",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "maxLength": 5000
+                  },
+                  "title": {
+                    "type": "string",
+                    "nullable": true,
+                    "maxLength": 191
+                  }
+                },
+                "required": [
+                  "reason"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Ticket created and work order marked incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderIncompleteResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "OAuth JWT bearer token validated by the `oauth-jwt` guard."
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Authentication required.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ValidationError": {
+        "description": "Validation failed.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string"
+                },
+                "errors": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "PaginatedWorkOrders": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkOrder"
+            }
+          },
+          "links": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "WorkOrder": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "scheduled_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "measurements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Measurement"
+            }
+          },
+          "customer": {
+            "$ref": "#/components/schemas/Customer"
+          },
+          "project": {
+            "$ref": "#/components/schemas/Project"
+          }
+        },
+        "required": [
+          "id",
+          "measurements",
+          "customer",
+          "project"
+        ]
+      },
+      "Measurement": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "product": {
+            "type": "string"
+          },
+          "is_film": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "product",
+          "is_film"
+        ]
+      },
+      "Customer": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "Project": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "address": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "project_state": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "PhotoUploadResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "photo_id": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "message",
+          "photo_id"
+        ]
+      },
+      "EnRouteResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "work_order_id": {
+            "type": "integer"
+          },
+          "staff_user_id": {
+            "type": "integer",
+            "nullable": true
+          },
+          "triggered_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "message",
+          "work_order_id",
+          "triggered_at"
+        ]
+      },
+      "WorkOrderSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "prefixed_id": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "prefixed_id",
+          "state"
+        ]
+      },
+      "StoredPaymentMethod": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "type"
+        ]
+      },
+      "ProjectCommentResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "comment": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "comment": {
+                "type": "string"
+              },
+              "project_id": {
+                "type": "integer"
+              },
+              "work_order_id": {
+                "type": "integer"
+              },
+              "user_id": {
+                "type": "integer"
+              },
+              "user_name": {
+                "type": "string"
+              },
+              "created_at": {
+                "type": "string",
+                "format": "date-time",
+                "nullable": true
+              }
+            },
+            "required": [
+              "id",
+              "comment",
+              "project_id",
+              "work_order_id",
+              "user_id"
+            ]
+          }
+        },
+        "required": [
+          "message",
+          "comment"
+        ]
+      },
+      "WorkOrderCompleteResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "work_order": {
+            "$ref": "#/components/schemas/WorkOrderSummary"
+          },
+          "project_balance_due": {
+            "type": "number",
+            "format": "float"
+          },
+          "payment_methods_on_file": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StoredPaymentMethod"
+            }
+          }
+        },
+        "required": [
+          "message",
+          "work_order",
+          "project_balance_due",
+          "payment_methods_on_file"
+        ]
+      },
+      "PaymentSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "amount": {
+            "type": "number",
+            "format": "float"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "payment_intent_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "payment_method_id": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "amount",
+          "provider",
+          "state"
+        ]
+      },
+      "TapToPayResponse": {
+        "type": "object",
+        "properties": {
+          "payment_intent_id": {
+            "type": "string"
+          },
+          "client_secret": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "payment_intent_id",
+          "status"
+        ]
+      },
+      "WorkOrderPaymentResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "payment": {
+            "$ref": "#/components/schemas/PaymentSummary"
+          },
+          "tap_to_pay": {
+            "$ref": "#/components/schemas/TapToPayResponse"
+          },
+          "project_balance_due": {
+            "type": "number",
+            "format": "float"
+          }
+        },
+        "required": [
+          "message",
+          "payment",
+          "project_balance_due"
+        ]
+      },
+      "TicketSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "prefixed_id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "prefixed_id",
+          "project_id",
+          "title",
+          "state"
+        ]
+      },
+      "WorkOrderIncompleteResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "work_order": {
+            "$ref": "#/components/schemas/WorkOrderSummary"
+          },
+          "ticket": {
+            "$ref": "#/components/schemas/TicketSummary"
+          }
+        },
+        "required": [
+          "message",
+          "work_order",
+          "ticket"
+        ]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ]
+      }
+    }
+  }
+}

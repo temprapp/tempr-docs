@@ -1,0 +1,24 @@
+---
+title: Work Order Flow
+description: "Describes how work orders move through the system, from creation to completion, including status changes and notifications."
+---
+
+## Standard W/O Flow
+
+<Steps>
+  <Step title="Tech En-Route">
+    ```POST /work-orders/en-route```
+  </Step>
+  <Step title="Tech Arrives">
+    Automatically handled by Radar geofencing. Tempr Server receives the event from Radar
+  </Step>
+  <Step title="Tech Takes Before / After Photos">
+    ```POST /work-orders/photos```
+  </Step>
+    <Step title="Tech Selects Complete / Incomplete">
+      ```POST /work-orders/complete``` or ```POST /work-orders/incomplete```
+    </Step>
+    <Step title="IF: Complete | Tech accepts or skips final payment">
+      ```POST /work-orders/payments```
+    </Step>
+</Steps>
