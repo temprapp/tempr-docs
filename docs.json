@@ -27,7 +27,6 @@
           {
             "group": "Get Started",
             "pages": [
-              "introduction",
               "api/work-orders/guides/work-order-flow"
             ]
           },
@@ -42,21 +41,6 @@
               "api/work-orders/payments",
               "api/work-orders/complete",
               "api/work-orders/incomplete"
-            ]
-          }
-        ]
-      },
-      {
-        "tab": "Components",
-        "icon": "puzzle-piece",
-        "groups": [
-          {
-            "group": "Components",
-            "pages": [
-              "components/cards",
-              "components/callouts",
-              "components/tabs-and-accordions",
-              "components/steps"
             ]
           }
         ]
